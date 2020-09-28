@@ -28,6 +28,13 @@ def get_file_list(
     return sorted(list_of_data_locs)
 
 
+def get_image_data_from_bioformat(file: str, file_type: str):
+    if file_type == "nd2":
+        return nd2_to_npy(file)
+    else:
+        raise NotImplementedError("Unknown file type: {}".format(file_type))
+
+
 def nd2_to_npy(nd2_file: str) -> dict:
     """Function that returns a dictionary that includes the images for each channel of the .nd2 file
     and the meta-information"""

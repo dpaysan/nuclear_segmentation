@@ -1,0 +1,10 @@
+output_dir: '../../data/tcell_project/crops/'
+module: src.segmentation.nuclei_segmentation
+class: Simple3dSegmentationPipeline
+run_params:
+  input_dir: '../../data/tcell_project/raw_data'
+
+
+pipeline:
+  - method: run_default_pipeline
+
