@@ -217,7 +217,7 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
         self.processed_projection = np.uint8(thresh)
 
     def set_sure_fg_projection_by_distance_transform(
-        self, threshold: float = 0.3, distance_type: str = "l2", mask_size: int = 0
+        self, threshold: float = 0.4, distance_type: str = "l2", mask_size: int = 0
     ):
         self.sure_fg_projection = get_sure_foreground_from_distance(
             self.processed_projection,

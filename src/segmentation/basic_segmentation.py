@@ -18,7 +18,7 @@ def get_watershed_labels(
     labels = watershed(img, markers, mask=mask)
 
     # To remove potential artifacts we ensure that we do not get disconnected areas for the same label
-    # labels = label(labels, connectivity=2)
+    labels = label(labels)
     return labels
 
 
