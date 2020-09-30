@@ -2,7 +2,7 @@ output_dir: '../../data/tcell_project/crops/'
 module: src.pipelines.nuclei_segmentation
 class: ProjectedWatershed3dSegmentationPipeline
 run_params:
-  input_dir: '../../data/tcell_project/split_raw_data/tzyxc_pkl/'
+  input_dir: '../../data/tcell_project/split_raw_data/tzyxc_pkl/pkl_files/'
 
 
 pipeline:

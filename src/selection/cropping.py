@@ -46,7 +46,6 @@ def get_3d_nuclear_crops_from_2d_segmentation(
     )
     nuclei_dicts = []
     for properties in nuclear_properties:
-        filter_object.set_properties(properties=properties)
         depth, width, height = intensity_image.shape
         xmin, ymin, xmax, ymax = properties.bbox
         xmin = max(0, xmin - xbuffer)
@@ -55,11 +54,21 @@ def get_3d_nuclear_crops_from_2d_segmentation(
         ymax = min(ymax + ybuffer + 1, height)
 
         # Filter artifact labels by a simple size filter of 2 pixels
-        if filter_object is None or filter_object.filter(input=intensity_image):
+        if filter_object is None:
             nuclei_dicts.append(
                 {
                     "image": intensity_image[:, xmin:xmax, ymin:ymax],
                     "props": properties,
                 }
             )
+        else:
+            filter_object.set_properties(properties=properties)
+            if filter_object.filter(input=intensity_image):
+                nuclei_dicts.append(
+                    {
+                        "image": intensity_image[:, xmin:xmax, ymin:ymax],
+                        "props": properties,
+                    }
+                )
+
     return nuclei_dicts

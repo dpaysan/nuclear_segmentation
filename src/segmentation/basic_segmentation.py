@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from skimage.filters import threshold_otsu
 from skimage.segmentation import watershed
 from skimage.measure import label
 
@@ -19,3 +20,13 @@ def get_watershed_labels(
     # To remove potential artifacts we ensure that we do not get disconnected areas for the same label
     # labels = label(labels, connectivity=2)
     return labels
+
+
+def label_single_object_image(img:np.ndarray, kernel_size:int=3, iterations:int=2):
+    kernel = np.ones((kernel_size, kernel_size))
+    thresh = threshold_otsu(img)
+    binary = np.uint8(img > thresh)
+    closing = cv2.morphologyEx(binary.transpose(), cv2.MORPH_CLOSE, kernel=kernel, iterations=iterations)
+    opening = cv2.morphologyEx(closing.transpose(), cv2.MORPH_OPEN, kernel=kernel, iterations=iterations)
+    labeled_img = label(opening)
+    return labeled_img

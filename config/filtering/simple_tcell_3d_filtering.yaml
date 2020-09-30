@@ -1,0 +1,10 @@
+output_dir: '../../data/tcell_project/crops/'
+module: src.pipelines.filter
+class: FilterPipeline
+run_params:
+  input_dir: '../../data/tcell_project/split_raw_data/tzyxc_pkl/'
+
+
+pipeline:
+  - method: run_default_pipeline
+
