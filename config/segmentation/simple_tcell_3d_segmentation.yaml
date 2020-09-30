@@ -1,8 +1,8 @@
 output_dir: '../../data/tcell_project/crops/'
-module: src.segmentation.nuclei_segmentation
-class: Simple3dSegmentationPipeline
+module: src.pipelines.nuclei_segmentation
+class: ProjectedWatershed3dSegmentationPipeline
 run_params:
-  input_dir: '../../data/tcell_project/raw_data'
+  input_dir: '../../data/tcell_project/split_raw_data/tzyxc_pkl/'
 
 
 pipeline:

@@ -28,9 +28,9 @@ logging.basicConfig(
 )
 
 mpl_logger = logging.getLogger("matplotlib")
-mpl_logger.setLevel(logging.WARNING)
+mpl_logger.setLevel(logging.ERROR)
 numba_logger = logging.getLogger("numba")
-numba_logger.setLevel(logging.WARNING)
+numba_logger.setLevel(logging.ERROR)
 
 
 class ExperimentRunner:

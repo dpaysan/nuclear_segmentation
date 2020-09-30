@@ -1,8 +1,11 @@
+import gzip
+import logging
 import os
 import numpy as np
 import tifffile
 from nd2reader import ND2Reader
 from typing import List
+import pickle as cPickle
 
 
 def get_file_list(
@@ -31,25 +34,100 @@ def get_file_list(
 def get_image_data_from_bioformat(file: str, file_type: str):
     if file_type == "nd2":
         return nd2_to_npy(file)
+    elif file_type == "pkl":
+        return load_data_dict_from_pickle(path=file)
     else:
         raise NotImplementedError("Unknown file type: {}".format(file_type))
 
 
-def nd2_to_npy(nd2_file: str) -> dict:
+def nd2_to_npy(nd2_file: str) -> List[dict]:
     """Function that returns a dictionary that includes the images for each channel of the .nd2 file
     and the meta-information"""
-    with ND2Reader(nd2_file) as reader:
-        metadata = reader.metadata
-        width, height, depth = reader.sizes["x"], reader.sizes["y"], reader.sizes["z"]
-        channels = metadata["channels"]
-        image = np.zeros([depth, height, width, depth], dtype=np.float64)
-        for idx, channel in enumerate(channels):
-            reader.default_coords["c"] = idx
-            for i in range(depth):
-                image[i, :, :, idx] = reader[i]
-        data_dict = {"channels": channels, "image": image, "metadata": metadata}
-        return data_dict
+    try:
+        data_dicts = []
+        with ND2Reader(nd2_file) as reader:
+            metadata = reader.metadata
+            channels = metadata["channels"]
+            reader.bundle_axes = "zyxc"
+            if "v" in reader.axes:
+                reader.iter_axes = "v"
+                for frame in reader:
+                    image = frame
+                    data_dict = {
+                        "channels": channels,
+                        "image": image,
+                        "metadata": metadata,
+                    }
+                    data_dicts.append(data_dict)
+            else:
+                logging.debug(
+                    "No image series but a single image found for {}.".format(nd2_file)
+                )
+                image = reader[0]
+                data_dict = {"channels": channels, "image": image, "metadata": metadata}
+                data_dicts.append(data_dict)
+
+        return data_dicts
+
+    except Exception:
+        logging.debug("File not readable: {}".format(nd2_file))
+        return []
 
 
-def save_npy_as_tiff(frames: np.ndarray, path: str):
-    tifffile.imsave(path, frames)
+def split_nd2_series_save_as_pickle(nd2_file: str, output_dir: str):
+    file_name = os.path.split(nd2_file)[1]
+    file_name = file_name[: file_name.index(".")]
+    data_dicts = nd2_to_npy(nd2_file=nd2_file)
+    for i in range(len(data_dicts)):
+        path = str(os.path.join(output_dir, file_name)) + "_s{}.pkl".format(i)
+        save_pickle(data_dicts[i], path)
+
+
+def load_data_dict_from_pickle(path: str):
+    return load_pickle(filename=path)
+
+
+def split_nd2_series_save_as_tif(nd2_file: str, output_dir: str):
+    file_name = os.path.split(nd2_file)[1]
+    file_name = file_name[: file_name.index(".")]
+    data_dicts = nd2_to_npy(nd2_file=nd2_file)
+    for i in range(len(data_dicts)):
+        image = data_dicts[i]["image"]
+        path = str(os.path.join(output_dir, file_name)) + "_s{}.tif".format(i)
+        # Add dimension to reach format conform with the expected output
+        tifffile.imsave(path, np.expand_dims(image, axis=0), metadata={"axes": "TZYXC"})
+
+
+def save_npy_as_tiff(frame: np.ndarray, path: str):
+    tifffile.imsave(path, np.expand_dims(frame, axis=0), metadata={"axes": "TZYXC"})
+
+
+def save_pickle(obj, filename, protocol=-1):
+    r""" Function to save an object as a zip-compressed pickle file.
+    Parameters
+    ----------
+    obj : object
+        The object that is serialized
+    filename : str
+        The path of the file that should hold the serialized object.
+    protocol : int
+        The protocol used to compress the object. See :py:meth:`cPickle.dump` for more information.
+    """
+    with open(filename, "wb") as f:
+        cPickle.dump(obj, f, protocol)
+
+
+def load_pickle(filename):
+    r""" Function to load an object from disk that was serialized as a zip-compressed pickle file.
+    Parameters
+    ----------
+    filename : str
+        The path of the file that is the serialized object.
+    Returns
+    -------
+    loaded_object : object
+        The deserialized object.
+    """
+    with open(filename, "rb") as f:
+        loaded_object = cPickle.load(f)
+        return loaded_object

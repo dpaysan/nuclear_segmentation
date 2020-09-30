@@ -1,6 +1,8 @@
 import numpy as np
-from typing import List
+from typing import List, Tuple
 from skimage.measure import regionprops
+
+from src.selection.filtering import PropertyFilter
 
 
 def get_conservative_nuclear_crops(
@@ -28,4 +30,36 @@ def get_conservative_nuclear_crops(
                 "props": properties,
             }
         )
+    return nuclei_dicts
+
+
+def get_3d_nuclear_crops_from_2d_segmentation(
+    labeled_projection: np.ndarray,
+    intensity_projection: np.ndarray,
+    intensity_image: np.ndarray,
+    xbuffer: int = 0,
+    ybuffer: int = 0,
+    filter_object: PropertyFilter = None,
+):
+    nuclear_properties = regionprops(
+        label_image=labeled_projection, intensity_image=intensity_projection
+    )
+    nuclei_dicts = []
+    for properties in nuclear_properties:
+        filter_object.set_properties(properties=properties)
+        depth, width, height = intensity_image.shape
+        xmin, ymin, xmax, ymax = properties.bbox
+        xmin = max(0, xmin - xbuffer)
+        ymin = max(0, ymin - ybuffer)
+        xmax = min(xmax + xbuffer + 1, width)
+        ymax = min(ymax + ybuffer + 1, height)
+
+        # Filter artifact labels by a simple size filter of 2 pixels
+        if filter_object is None or filter_object.filter(input=intensity_image):
+            nuclei_dicts.append(
+                {
+                    "image": intensity_image[:, xmin:xmax, ymin:ymax],
+                    "props": properties,
+                }
+            )
     return nuclei_dicts

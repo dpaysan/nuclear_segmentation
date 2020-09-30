@@ -1,0 +1,10 @@
+output_dir: '../../data/tcell_project/split_raw_data/'
+module: src.preprocessing.pipeline
+class: SimplePreprocessingPipeline
+run_params:
+  input_dir: '../../data/tcell_project/raw_data/'
+
+
+pipeline:
+  - method: run_default_pipeline
+
