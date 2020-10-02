@@ -13,7 +13,7 @@ class Filter(object):
         raise NotImplementedError
 
 
-class PropertyFilter(Filter, ABC):
+class ObjectPropertyFilter(Filter, ABC):
     def __init__(self, properties: Any):
         super().__init__()
         self.properties = properties
@@ -25,7 +25,7 @@ class PropertyFilter(Filter, ABC):
         raise NotImplementedError
 
 
-class AreaFilter(PropertyFilter, ABC):
+class ObjectAreaFilter(ObjectPropertyFilter, ABC):
     def __init__(self, properties: Any, thresholds: Any, threshold_unit_pp: float):
         super().__init__(properties)
         if isinstance(thresholds, float) or isinstance(thresholds, int):
@@ -51,7 +51,7 @@ class AreaFilter(PropertyFilter, ABC):
             return True
 
 
-class AspectRatioFilter(PropertyFilter, ABC):
+class ObjectAspectRatioFilter(ObjectPropertyFilter, ABC):
     def __init__(self, properties: Any, thresholds: Any):
         super().__init__(properties)
         if isinstance(thresholds, float):
@@ -76,7 +76,7 @@ class AspectRatioFilter(PropertyFilter, ABC):
             return True
 
 
-class SolidityFilter(PropertyFilter):
+class ObjectSolidityFilter(ObjectPropertyFilter):
     def __init__(self, properties: Any, thresholds: Any):
         super().__init__(properties)
         if isinstance(thresholds, float):
@@ -99,7 +99,7 @@ class SolidityFilter(PropertyFilter):
             return True
 
 
-class EccentricityFilter(PropertyFilter):
+class ObjectEccentricityFilter(ObjectPropertyFilter):
     def __init__(self, properties: Any, thresholds: Any):
         super().__init__(properties)
         if isinstance(thresholds, float):
@@ -142,7 +142,7 @@ class ConfocalShiftFilter(Filter):
                 hist1 = hist2
 
 
-class PropertyFilterPipeline(PropertyFilter):
+class ObjectPropertyFilterPipeline(ObjectPropertyFilter):
     def __init__(self, filter_list: Iterable[Filter]):
         super().__init__(None)
         self.filter_list = filter_list
@@ -165,65 +165,45 @@ class DeadCellFilter(Filter):
     def filter(self, **kwargs) -> bool:
         raise NotImplementedError
 
-# def filter_nuclei_by_size(
-#     nuclear_crops,
-#     microns_per_pixel: float,
-#     min_volume: float = None,
-#     max_volume: float = None,
-#     **kwargs
-# ) -> Tuple[list, list]:
-#     filtered_idc = []
-#     filtered_out_idc = []
-#     for i in range(len(nuclear_crops)):
-#         volume = nuclear_crops[i]["props"].filled_area * (microns_per_pixel) ** 3
-#         if min_volume is not None and volume < min_volume:
-#             filtered_out_idc.append(i)
-#         elif max_volume is not None and volume > max_volume:
-#             filtered_out_idc.append(i)
-#         else:
-#             filtered_idc.append(i)
-#     return filtered_idc, filtered_out_idc
-#
-#
-# def filter_nuclei(nuclear_crops: List[dict], mode: str, **kwargs):
-#     if mode == "size":
-#         return filter_nuclei_by_size(nuclear_crops=nuclear_crops, **kwargs)
-#     elif mode == "solidity":
-#         return filter_nuclei_by_solidity(nuclear_crops=nuclear_crops, **kwargs)
-#     elif mode == "aspect_ratio":
-#         return filter_nuclei_by_aspect_ratio(nuclear_crops, **kwargs)
-#     elif mode == "all":
-#         return intersection(
-#             filter_nuclei_by_solidity(nuclear_crops=nuclear_crops, **kwargs),
-#             filter_nuclei_by_size(nuclear_crops=nuclear_crops, **kwargs),
-#         )
-#     else:
-#         raise RuntimeError("Unknown filter mode: {}".format(mode))
-#
-#
-# def filter_nuclei_by_solidity(
-#     nuclear_crops: List[dict], threshold: float = 0.8, **kwargs
-# ):
-#     filtered_idc = []
-#     filtered_out_idc = []
-#     for i in range(len(nuclear_crops)):
-#         solidity = nuclear_crops[i]["props"].solidity
-#         if solidity > threshold:
-#             filtered_idc.append(i)
-#         else:
-#             filtered_out_idc.append(i)
-#     return filtered_idc, filtered_out_idc
-#
-#
-# def filter_nuclei_by_aspect_ratio(
-#     nuclear_crops: List[dict], threshold: float = 0.8, **kwargs
-# ):
-#     filtered_idc = []
-#     filtered_out_idc = []
-#     for i in range(len(nuclear_crops)):
-#         _, width, height = nuclear_crops[i]["image"].shape
-#         if min(width, height) / max(width, height) < threshold:
-#             filtered_out_idc.append(i)
-#         else:
-#             filtered_idc.append(i)
-#     return filtered_idc, filtered_out_idc
+
+class AspectRatioFilter(Filter):
+    def __init__(self, thresholds: Any):
+        super().__init__()
+        if isinstance(thresholds, float):
+            self.min_ar = thresholds
+            self.max_ar = 1.0
+        elif isinstance(thresholds, Iterable):
+            self.min_ar = thresholds[0]
+            self.max_ar = thresholds[1]
+        else:
+            raise RuntimeError("Thresholds must be Iterable of size 2 or a float.")
+
+    def filter(self, input:np.ndarray, **kwargs) -> bool:
+        min_dim = min(input.shape[-1], input.shape[-2])
+        max_dim = max(input.shape[-1], input.shape[-2])
+        ar = min_dim / max_dim
+        if ar < self.min_ar or ar > self.max_ar:
+            return False
+        else:
+            return True
+
+
+class AreaFilter(Filter):
+    def __init__(self, thresholds: Any, threshold_unit_pp:float):
+        super().__init__()
+        self.threshold_units_pp = threshold_unit_pp
+        if isinstance(thresholds, float):
+            self.min_area = thresholds
+            self.max_ar = 1.0
+        elif isinstance(thresholds, Iterable):
+            self.min_area = thresholds[0]
+            self.max_area = thresholds[1]
+        else:
+            raise RuntimeError("Thresholds must be Iterable of size 2 or a float.")
+
+    def filter(self, input:np.ndarray, **kwargs) -> bool:
+        area= input.shape[-1] * input.shape[-2] * self.threshold_units_pp
+        if area < self.min_area or area > self.max_area:
+            return False
+        else:
+            return True

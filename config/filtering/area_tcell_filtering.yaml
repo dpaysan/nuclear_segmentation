@@ -1,0 +1,15 @@
+output_dir: '../../data/tcell_project/filtered/'
+module: src.pipelines.filter
+class: FilterPipeline
+run_params:
+  input_dir: '../../data/tcell_project/filtered/20201002_210123/filtered/'
+
+
+pipeline:
+  - method: add_area_filter
+    params:
+      thresholds: [25, 50]
+      threshold_unit_pp: 0.01
+  - method: run_filtering
+  #- method: plot_images
+

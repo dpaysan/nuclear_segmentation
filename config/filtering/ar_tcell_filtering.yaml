@@ -1,0 +1,13 @@
+output_dir: '../../data/tcell_project/filtered/'
+module: src.pipelines.filter
+class: FilterPipeline
+run_params:
+  input_dir: '../../data/tcell_project/crops/20201002_205055/segmentations_all'
+
+
+pipeline:
+  - method: add_aspect_ratio_filter
+    params:
+      thresholds: 0.8
+  - method: run_filtering
+

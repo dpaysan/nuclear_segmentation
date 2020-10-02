@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Tuple
 from skimage.measure import regionprops
 
-from src.selection.filtering import PropertyFilter
+from src.selection.filtering import ObjectPropertyFilter
 
 
 def get_conservative_nuclear_crops(
@@ -39,7 +39,7 @@ def get_3d_nuclear_crops_from_2d_segmentation(
     intensity_image: np.ndarray,
     xbuffer: int = 0,
     ybuffer: int = 0,
-    filter_object: PropertyFilter = None,
+    filter_object: ObjectPropertyFilter = None,
 ):
     nuclear_properties = regionprops(
         label_image=labeled_projection, intensity_image=intensity_projection
