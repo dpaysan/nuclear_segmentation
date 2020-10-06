@@ -1,0 +1,17 @@
+output_dir: '../../data/tcell_project/filtered/'
+module: src.pipelines.filter
+class: FilterPipeline
+run_params:
+  input_dir: '../../data/tcell_project/filtered/area_filtered/filtered'
+
+
+pipeline:
+  - method: add_conservative_dead_cell_filter
+    params:
+      intensity_threshold: 250
+      portion_threshold: 0.05
+  - method: run_filtering
+  - method: plot_images
+    params:
+      image_type: 'filtered_out'
+

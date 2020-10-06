@@ -2,7 +2,7 @@ output_dir: '../../data/tcell_project/filtered/'
 module: src.pipelines.filter
 class: FilterPipeline
 run_params:
-  input_dir: '../../data/tcell_project/filtered/20201002_210123/filtered/'
+  input_dir: '../../data/tcell_project/filtered/ar_filtered_08_16bit/filtered/'
 
 
 pipeline:
@@ -11,5 +11,5 @@ pipeline:
       thresholds: [25, 50]
       threshold_unit_pp: 0.01
   - method: run_filtering
-  #- method: plot_images
+  - method: plot_images
 
