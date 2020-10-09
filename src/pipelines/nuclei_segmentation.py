@@ -57,11 +57,12 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
         raw_image = self.image_data["image"][
                     :, :, :, self.image_data["channels"].index(channel)
                     ]
+        self.raw_image = raw_image
         if normalize:
             raw_image /= raw_image.max()
             raw_image *= 255
             raw_image = raw_image.astype(np.uint8)
-        self.raw_image = raw_image
+        #self.raw_image = raw_image
         # Requires first axis to be the z axis.
         self.z_projection = np.max(raw_image, axis=0)
         self.processed_projection = self.z_projection
