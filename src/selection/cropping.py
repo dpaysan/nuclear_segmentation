@@ -40,6 +40,7 @@ def get_3d_nuclear_crops_from_2d_segmentation(
     xbuffer: int = 0,
     ybuffer: int = 0,
     filter_object: ObjectPropertyFilter = None,
+    filter_out_touching_objects = True,
 ):
     nuclear_properties = regionprops(
         label_image=labeled_projection, intensity_image=intensity_projection
@@ -48,6 +49,8 @@ def get_3d_nuclear_crops_from_2d_segmentation(
     for properties in nuclear_properties:
         depth, width, height = intensity_image.shape
         xmin, ymin, xmax, ymax = properties.bbox
+        if filter_out_touching_objects and (xmin <= 0 or xmax >= width-1 or ymin <= 0 or ymax >= height-1):
+            continue
         xmin = max(0, xmin - xbuffer)
         ymin = max(0, ymin - ybuffer)
         xmax = min(xmax + xbuffer + 1, width)

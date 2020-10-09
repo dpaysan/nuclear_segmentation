@@ -2,7 +2,7 @@ output_dir: '../../data/tcell_project/filtered/'
 module: src.pipelines.filter
 class: FilterPipeline
 run_params:
-  input_dir: '../../data/tcell_project/crops/unfiltered_canny_edge_16bit/segmentations_all'
+  input_dir: '../../data/tcell_project/crops/selected_slices_crops/segmentations_all'
 
 
 pipeline:

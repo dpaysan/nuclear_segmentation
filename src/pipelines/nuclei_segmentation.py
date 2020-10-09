@@ -62,7 +62,6 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
             raw_image /= raw_image.max()
             raw_image *= 255
             raw_image = raw_image.astype(np.uint8)
-        #self.raw_image = raw_image
         # Requires first axis to be the z axis.
         self.z_projection = np.max(raw_image, axis=0)
         self.processed_projection = self.z_projection
@@ -151,5 +150,5 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
             #self.set_sure_bg_projection_by_morphological_transformation()
             #self.segment_projection_by_watershed()
             self.segment_by_canny_edge_detection(sigma=2.5)
-            self.get_nuclear_crops_from_labeled_projection(filter=filter_pipeline, xbuffer=2, ybuffer=2)
+            self.get_nuclear_crops_from_labeled_projection(filter=filter_pipeline, xbuffer=3, ybuffer=3)
             self.save_nuclear_crops()

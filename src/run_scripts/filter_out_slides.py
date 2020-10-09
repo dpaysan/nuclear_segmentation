@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import os
 from src.utils.io import get_file_list
 from shutil import copyfile
