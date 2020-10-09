@@ -158,12 +158,19 @@ class ObjectPropertyFilterPipeline(ObjectPropertyFilter):
         return True
 
 
-class DeadCellFilter(Filter):
-    def __init__(self):
+class ConservativeDeadCellFilter(Filter):
+    """ Dead cells often show an relatively high portion of high intensity values.
+    Thus a conservative filter detects dead cells based on that. Note that thereby some dead cells will be missed."""
+    def __init__(self, intensity_threshold:float=250, portion_threshold:float=0.05):
         super().__init__()
+        self.pixel_threshold = intensity_threshold
+        self.portion_threshold = portion_threshold
 
-    def filter(self, **kwargs) -> bool:
-        raise NotImplementedError
+    def filter(self, input:np.ndarray) -> bool:
+        if np.mean(input > self.pixel_threshold) < self.portion_threshold:
+            return True
+        else:
+            return False
 
 
 class AspectRatioFilter(Filter):
@@ -178,7 +185,7 @@ class AspectRatioFilter(Filter):
         else:
             raise RuntimeError("Thresholds must be Iterable of size 2 or a float.")
 
-    def filter(self, input:np.ndarray, **kwargs) -> bool:
+    def filter(self, input: np.ndarray, **kwargs) -> bool:
         min_dim = min(input.shape[-1], input.shape[-2])
         max_dim = max(input.shape[-1], input.shape[-2])
         ar = min_dim / max_dim
@@ -189,7 +196,7 @@ class AspectRatioFilter(Filter):
 
 
 class AreaFilter(Filter):
-    def __init__(self, thresholds: Any, threshold_unit_pp:float):
+    def __init__(self, thresholds: Any, threshold_unit_pp: float):
         super().__init__()
         self.threshold_units_pp = threshold_unit_pp
         if isinstance(thresholds, float):
@@ -201,8 +208,8 @@ class AreaFilter(Filter):
         else:
             raise RuntimeError("Thresholds must be Iterable of size 2 or a float.")
 
-    def filter(self, input:np.ndarray, **kwargs) -> bool:
-        area= input.shape[-1] * input.shape[-2] * self.threshold_units_pp
+    def filter(self, input: np.ndarray, **kwargs) -> bool:
+        area = input.shape[-1] * input.shape[-2] * self.threshold_units_pp
         if area < self.min_area or area > self.max_area:
             return False
         else:

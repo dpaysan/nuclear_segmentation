@@ -41,11 +41,11 @@ def get_image_data_from_bioformat(file: str, file_type: str):
         raise NotImplementedError("Unknown file type: {}".format(file_type))
 
 
-def get_image_from_disk(file, file_type:str)->np.ndarray:
-    if file_type in ['tif', 'tiff']:
+def get_image_from_disk(file, file_type: str) -> np.ndarray:
+    if file_type in ["tif", "tiff"]:
         return tifffile.imread(file)
     else:
-        raise RuntimeError('Unknown file type: '.format(file_type))
+        raise RuntimeError("Unknown file type: ".format(file_type))
 
 
 def nd2_to_npy(nd2_file: str) -> List[dict]:

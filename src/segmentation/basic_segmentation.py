@@ -24,19 +24,32 @@ def get_watershed_labels(
     return labels
 
 
-def label_single_object_image(img:np.ndarray, kernel_size:int=3, iterations:int=2):
+def label_single_object_image(
+    img: np.ndarray, kernel_size: int = 3, iterations: int = 2
+):
     img = np.squeeze(img)
     kernel = np.ones((kernel_size, kernel_size))
     thresh = threshold_otsu(img)
     binary = np.uint8(img > thresh)
-    closing = cv2.morphologyEx(binary.transpose(), cv2.MORPH_CLOSE, kernel=kernel, iterations=iterations)
-    opening = cv2.morphologyEx(closing.transpose(), cv2.MORPH_OPEN, kernel=kernel, iterations=iterations)
+    closing = cv2.morphologyEx(
+        binary.transpose(), cv2.MORPH_CLOSE, kernel=kernel, iterations=iterations
+    )
+    opening = cv2.morphologyEx(
+        closing.transpose(), cv2.MORPH_OPEN, kernel=kernel, iterations=iterations
+    )
     labeled_img = label(opening)
     return labeled_img
 
 
-def get_edge_based_labels(img:np.ndarray, sigma:float=3.0, low_threshold:float=None, high_threshold:float=None):
-    edges = canny(img, sigma=sigma, low_threshold=low_threshold, high_threshold=high_threshold)
+def get_edge_based_labels(
+    img: np.ndarray,
+    sigma: float = 3.0,
+    low_threshold: float = None,
+    high_threshold: float = None,
+):
+    edges = canny(
+        img, sigma=sigma, low_threshold=low_threshold, high_threshold=high_threshold
+    )
     filled_objects = ndi.binary_fill_holes(edges)
     labeled_img = label(filled_objects)
     return labeled_img

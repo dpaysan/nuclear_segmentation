@@ -2,7 +2,7 @@ output_dir: '../../data/tcell_project/filtered/'
 module: src.pipelines.filter
 class: FilterPipeline
 run_params:
-  input_dir: '../../data/tcell_project/filtered/selected_slices_ar_ratio_filtered_08/filtered/'
+  input_dir: '../../data/tcell_project/filtered/ar_filtered_08_16bit/filtered/'
 
 
 pipeline:
