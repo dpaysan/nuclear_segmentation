@@ -1,4 +1,3 @@
-import gzip
 import logging
 import os
 import numpy as np
@@ -14,7 +13,6 @@ def get_file_list(
     file_ending: bool = True,
     file_type_filter: str = None,
 ) -> List:
-
     assert os.path.exists(root_dir)
     list_of_data_locs = []
     for (root_dir, dirname, filename) in os.walk(root_dir):
@@ -81,10 +79,36 @@ def nd2_to_npy(nd2_file: str) -> List[dict]:
         return []
 
 
+def lsm_to_npy(lsm_file: str, channels=None) -> List[dict]:
+    try:
+        data_dicts = []
+        # Expect TZCXY shape but reshapes it to ZYXC
+        lsm_images = tifffile.imread(lsm_file)
+        for i in range(len(lsm_images)):
+            image = lsm_images[i].reshape((0, 3, 2, 1))
+            data_dict = {"channels": channels, "image": image, "meta_data": None}
+            data_dicts.append(data_dict)
+        return data_dicts
+    except Exception:
+        logging.debug("File not readable: {}".format(lsm_file))
+        return []
+
+
 def split_nd2_series_save_as_pickle(nd2_file: str, output_dir: str):
     file_name = os.path.split(nd2_file)[1]
     file_name = file_name[: file_name.index(".")]
     data_dicts = nd2_to_npy(nd2_file=nd2_file)
+    for i in range(len(data_dicts)):
+        path = str(os.path.join(output_dir, file_name)) + "_s{}.pkl".format(i)
+        save_pickle(data_dicts[i], path)
+
+
+def split_lsm_series_save_as_pickle(
+    lsm_file: str, output_dir: str, channels: List[str] = None
+):
+    file_name = os.path.split(lsm_file)[1]
+    file_name = file_name[: file_name.index(".")]
+    data_dicts = lsm_to_npy(lsm_file=lsm_file, channels=channels)
     for i in range(len(data_dicts)):
         path = str(os.path.join(output_dir, file_name)) + "_s{}.pkl".format(i)
         save_pickle(data_dicts[i], path)

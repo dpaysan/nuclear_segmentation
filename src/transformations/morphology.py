@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from scipy import ndimage as ndi
 
 
 def apply_morphology_transformation(
@@ -24,3 +25,14 @@ def apply_morphology_transformation(
         )
     else:
         raise RuntimeError("Unknown transformation mode: {} .".format(mode))
+
+
+def binary_fill_holes_layerwise(img: np.ndarray):
+    if len(img.shape) == 2:
+        filled = ndi.binary_fill_holes(img)
+    else:
+        filled = []
+        for i in range(len(img)):
+            filled.append(ndi.binary_fill_holes(img[i]))
+        filled = np.ndarray(filled)
+    return filled

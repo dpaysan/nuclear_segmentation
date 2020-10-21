@@ -79,9 +79,15 @@ class FilterPipeline(object):
     def add_aspect_ratio_filter(self, thresholds: Any):
         self.filters.append(AspectRatioFilter(thresholds=thresholds))
 
-    def add_conservative_dead_cell_filter(self, intensity_threshold:float=250, portion_threshold:float=0.05):
-        self.filters.append(ConservativeDeadCellFilter(intensity_threshold=intensity_threshold,
-                                                       portion_threshold=portion_threshold))
+    def add_conservative_dead_cell_filter(
+        self, intensity_threshold: float = 250, portion_threshold: float = 0.05
+    ):
+        self.filters.append(
+            ConservativeDeadCellFilter(
+                intensity_threshold=intensity_threshold,
+                portion_threshold=portion_threshold,
+            )
+        )
 
     def plot_images(self, image_type: str = "all"):
         save_path = str(os.path.join(self.output_dir, "summary/" + image_type))

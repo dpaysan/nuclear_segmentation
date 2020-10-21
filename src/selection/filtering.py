@@ -161,12 +161,15 @@ class ObjectPropertyFilterPipeline(ObjectPropertyFilter):
 class ConservativeDeadCellFilter(Filter):
     """ Dead cells often show an relatively high portion of high intensity values.
     Thus a conservative filter detects dead cells based on that. Note that thereby some dead cells will be missed."""
-    def __init__(self, intensity_threshold:float=250, portion_threshold:float=0.05):
+
+    def __init__(
+        self, intensity_threshold: float = 250, portion_threshold: float = 0.05
+    ):
         super().__init__()
         self.pixel_threshold = intensity_threshold
         self.portion_threshold = portion_threshold
 
-    def filter(self, input:np.ndarray) -> bool:
+    def filter(self, input: np.ndarray) -> bool:
         if np.mean(input > self.pixel_threshold) < self.portion_threshold:
             return True
         else:

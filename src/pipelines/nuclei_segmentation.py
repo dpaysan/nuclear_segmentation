@@ -4,7 +4,9 @@ import cv2
 
 from src.segmentation.basic_segmentation import (
     get_watershed_labels,
-    get_edge_based_labels,
+    get_edge_based_segmentation,
+    label_objects,
+    get_chan_vese_based_object_mask_2d,
 )
 from src.selection.cropping import get_3d_nuclear_crops_from_2d_segmentation
 from src.selection.filtering import Filter
@@ -60,7 +62,7 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
             raw_image /= raw_image.max()
             raw_image *= 255
             raw_image = raw_image.astype(np.uint8)
-        #self.raw_image = raw_image
+        # self.raw_image = raw_image
         # Requires first axis to be the z axis.
         self.z_projection = np.max(raw_image, axis=0)
         self.processed_projection = self.z_projection
@@ -136,12 +138,19 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
         low_threshold: float = None,
         high_threshold: float = None,
     ):
-        self.labeled_projection = get_edge_based_labels(
+        object_mask = get_edge_based_segmentation(
             img=self.processed_projection,
             sigma=sigma,
             low_threshold=low_threshold,
             high_threshold=high_threshold,
         )
+        self.labeled_projection = label_objects(object_mask)
+
+    def segment_by_chan_vese_acwe(self, max_iter: int, fill_holes: bool = True):
+        object_mask = get_chan_vese_based_object_mask_2d(
+            img=self.processed_projection, max_iter=max_iter, fill_holes=fill_holes
+        )
+        self.labeled_projection = label_objects(object_mask)
 
     def run_default_pipeline(self):
         filter_pipeline = None
