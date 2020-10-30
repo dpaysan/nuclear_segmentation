@@ -1,9 +1,11 @@
 import cv2
 import numpy as np
+from scipy.ndimage.morphology import distance_transform_edt
+from skimage.measure import label
 
 
 def get_sure_foreground_from_distance(
-    img, threshold: float, distance_type: str = "l2", mask_size: int = 3
+    img:np.ndarray, threshold: float, distance_type: str = "l2", mask_size: int = 3
 ):
 
     if distance_type == "l1":

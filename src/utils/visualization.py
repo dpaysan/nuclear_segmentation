@@ -37,8 +37,14 @@ def plot_3d_images_as_map(
 
         for j in range(depth):
             if j < np.squeeze(images[i]).shape[0]:
-                img = cv2.resize(np.squeeze(images[i])[j, :, :], dsize=(64, 64))
-                img = img / img.max()
+                img = np.squeeze(images[i])
+                if len(img.shape) == 4:
+                    img = img[j,0,:,:]
+                else:
+                    img = img[j,:,:]
+                img = cv2.resize(img, dsize=(64, 64))
+                if img.max() > 0 :
+                    img = img / img.max()
             else:
                 img = np.zeros([64, 64])
             ax[idx, j].imshow(

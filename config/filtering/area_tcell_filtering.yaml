@@ -2,13 +2,14 @@ output_dir: '../../data/tcell_project/filtered/'
 module: src.pipelines.filter
 class: FilterPipeline
 run_params:
-  input_dir: '../../data/tcell_project/filtered/ar_filtered_08_16bit/filtered/'
+  input_dir: '../../data/tcell_project/filtered/fish_ar_filtered_08/filtered/'
 
 
 pipeline:
   - method: add_area_filter
     params:
-      thresholds: [25, 50]
+      #thresholds: [25, 50]
+      thresholds: [100,400]
       threshold_unit_pp: 0.01
   - method: run_filtering
   - method: plot_images

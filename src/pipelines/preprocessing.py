@@ -28,12 +28,12 @@ class SimplePreprocessingPipeline(PreprocessingPipeline):
 
     def split_nd2_file_save_as_compressed_dict(self, index):
         nd2_file = self.file_list[index]
-        split_nd2_series_save_as_pickle(nd2_file=nd2_file, output_dir=self.output_dir)
+        split_nd2_series_save_as_pickle(nd2_file=nd2_file, output_dir=self.output_dir+'/pkl_files/')
 
     def split_lsm_file_save_as_compressed_dict(self, index, channels: List[str] = None):
         lsm_file = self.file_list[index]
         split_lsm_series_save_as_pickle(
-            lsm_file=lsm_file, output_dir=self.output_dir, channels=channels
+            lsm_file=lsm_file, output_dir=self.output_dir+'/pkl_files/', channels=channels
         )
 
     def run_default_pipeline_nd2(self):

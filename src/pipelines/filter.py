@@ -5,9 +5,7 @@ import numpy as np
 
 from src.segmentation.basic_segmentation import label_single_object_image
 from src.selection.filtering import (
-    ConfocalShiftFilter,
     ConservativeDeadCellFilter,
-    ObjectPropertyFilter,
     AreaFilter,
     AspectRatioFilter,
 )
@@ -19,7 +17,7 @@ from src.utils.visualization import plot_3d_images_as_map
 
 
 class FilterPipeline(object):
-    def __init__(self, input_dir: str, output_dir: str):
+    def __init__(self, input_dir: str, output_dir: str, multi_channel:bool=False):
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.filters = []
@@ -29,8 +27,10 @@ class FilterPipeline(object):
         self.filtered_images = []
         self.filtered_out_images = []
         self.object_properties = None
+        self.multi_channel = multi_channel
 
-    def read_in_image(self, index):
+    def read_in_image(self, index:int):
+        # If multi-channel data is read - the first one is assumed to be the DAPI channel
         file = self.file_list[index]
         file_name = os.path.split(file)[1]
         file_ending_idx = file_name.index(".")
@@ -38,13 +38,18 @@ class FilterPipeline(object):
         file_name = file_name[:file_ending_idx]
         self.file_name = file_name
         self.image = get_image_from_disk(file=file, file_type=file_type)
+        if self.multi_channel:
+            # Input shape is assumed to be ZCYX
+            self.dapi_image = self.image[:, 0, :, :]
+        else:
+            self.dapi_image = self.image
 
     def get_object_properties(self, kernel_size: int = 3, iterations: int = 3):
         labeled_image = label_single_object_image(
-            self.image, kernel_size=kernel_size, iterations=iterations
+            self.dapi_image, kernel_size=kernel_size, iterations=iterations
         )
         object_properties = regionprops(
-            labeled_image, intensity_image=np.squeeze(self.image)
+            labeled_image, intensity_image=np.squeeze(self.dapi_image)
         )
         if len(object_properties) != 1:
             logging.debug("No or multiple objects detected in the image")
@@ -60,7 +65,7 @@ class FilterPipeline(object):
             filtered = True
             self.read_in_image(i)
             for filter in self.filters:
-                filtered = filtered and filter.filter(input=self.image)
+                filtered = filtered and filter.filter(input=self.dapi_image)
                 if not filtered:
                     break
             if filtered:
@@ -69,7 +74,7 @@ class FilterPipeline(object):
             else:
                 self.filtered_out_images.append(self.image)
                 path = str(filtered_out_output_dir) + "/" + self.file_name + ".tiff"
-            tifffile.imsave(path, self.image)
+            tifffile.imsave(path, np.expand_dims(self.image,axis=0), imagej=True)
 
     def add_area_filter(self, thresholds: Any, threshold_unit_pp: Any):
         self.filters.append(

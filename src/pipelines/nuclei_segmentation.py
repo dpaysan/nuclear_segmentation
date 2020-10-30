@@ -1,41 +1,48 @@
 import os
+from collections import Iterable
+import copy
+
 import numpy as np
 import cv2
+from skimage import exposure, filters, morphology
+import scipy.ndimage as ndi
 
 from src.segmentation.basic_segmentation import (
-    get_watershed_labels,
+    get_watershed_labels_with_fg_bg_masks,
     get_edge_based_segmentation,
     label_objects,
-    get_chan_vese_based_object_mask_2d,
+    get_chan_vese_based_object_mask_2d, get_watershed_labels_distance_transform,
 )
 from src.selection.cropping import get_3d_nuclear_crops_from_2d_segmentation
 from src.selection.filtering import Filter
+from src.transformations.enhancements import rescale_intensities
 from src.utils.io import get_file_list, get_image_data_from_bioformat, save_npy_as_tiff
 from src.transformations.distances import get_sure_foreground_from_distance
 from src.transformations.morphology import apply_morphology_transformation
 
 
 class SegmentationPipeline(object):
-    def __init__(self, input_dir: str, output_dir: str):
+    def __init__(self, input_dir: str, output_dir: str, file_type_filter:str=None):
         self.input_dir = input_dir
         self.output_dir = output_dir
-        self.file_list = get_file_list(self.input_dir)
+        self.file_list = get_file_list(self.input_dir, file_type_filter=file_type_filter)
         self.file_name = None
         self.image_data = None
 
     def read_in_image(self, index: int):
         file = self.file_list[index]
-        file_name = os.path.split(file)[1]
+        base_dir, file_name = os.path.split(file)
         file_ending_idx = file_name.index(".")
         file_type = file_name[file_ending_idx + 1 :]
         file_name = file_name[:file_ending_idx]
-        self.file_name = file_name
+        base_dir = os.path.split(base_dir)[0]
+        self.file_name = os.path.basename(base_dir) + '_' + file_name
         self.image_data = get_image_data_from_bioformat(file=file, file_type=file_type)
 
 
-class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
-    def __init__(self, input_dir: str, output_dir: str):
-        super().__init__(input_dir=input_dir, output_dir=output_dir)
+class NucleiSegmentationPipeline(SegmentationPipeline):
+    def __init__(self, input_dir: str, output_dir: str, file_type_filter:str=None):
+        super().__init__(input_dir=input_dir, output_dir=output_dir, file_type_filter=file_type_filter)
         self.file_name = None
         self.image_data = None
         self.raw_image = None
@@ -54,16 +61,17 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
         super().read_in_image(index=index)
 
     def select_image_by_channel(self, channel: str = "DAPI", normalize: bool = True):
-        raw_image = self.image_data["image"][
-            :, :, :, self.image_data["channels"].index(channel)
-        ]
-        self.raw_image = raw_image
+        raw_image = self.image_data["image"]
+        self.raw_image = copy.deepcopy(raw_image)
         if normalize:
+            raw_image = raw_image.astype(np.float64)
             raw_image /= raw_image.max()
             raw_image *= 255
             raw_image = raw_image.astype(np.uint8)
-        # self.raw_image = raw_image
         # Requires first axis to be the z axis.
+        raw_image = raw_image[
+            :, :, :, self.image_data["channels"].index(channel)
+        ]
         self.z_projection = np.max(raw_image, axis=0)
         self.processed_projection = self.z_projection
 
@@ -77,11 +85,22 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
             iterations=iterations,
         )
 
+    def correct_exposure(self, gamma:float=1.0):
+        processed_projection = filters.median(self.processed_projection)
+        processed_projection = exposure.equalize_adapthist(processed_projection)
+        processed_projection = exposure.adjust_gamma(processed_projection, gamma=gamma)
+        self.processed_projection = exposure.rescale_intensity(processed_projection)
+
+    def rescale_intensities(self, out_range=None, qs:Iterable=None):
+        self.processed_projection = rescale_intensities(img=self.processed_projection, out_range=out_range, qs=qs)
+
     def otsu_thresholding(self):
-        _, thresh = cv2.threshold(
-            self.processed_projection, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-        )
-        self.processed_projection = np.uint8(thresh)
+        #_, thresh = cv2.threshold(
+        #    self.processed_projection, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        #)
+        #self.processed_projection = np.uint8(thresh)
+        threshold = filters.threshold_otsu(self.processed_projection)
+        self.processed_projection = self.processed_projection > threshold
 
     def set_sure_fg_projection_by_distance_transform(
         self, threshold: float = 0.4, distance_type: str = "l2", mask_size: int = 0
@@ -93,6 +112,9 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
             mask_size=mask_size,
         )
 
+    def remove_holes_and_small_objects(self, threshold):
+        self.processed_projection = morphology.remove_small_objects(ndi.binary_fill_holes(self.processed_projection),threshold)
+
     def set_sure_bg_projection_by_morphological_transformation(
         self, mode: str = "dilate", kernel_size: int = 3, iterations: int = 10
     ):
@@ -103,16 +125,18 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
             iterations=iterations,
         )
 
-    def segment_projection_by_watershed(self):
-        self.labeled_projection = get_watershed_labels(
-            img=self.z_projection,
-            sure_fg=self.sure_fg_projection,
-            sure_bg=self.sure_bg_projection,
-            mask=self.processed_projection,
-        )
+    def segment_projection_by_watershed_from_fg_bg(self):
+        self.labeled_projection = get_watershed_labels_with_fg_bg_masks(img=self.z_projection,
+                                                                        sure_fg=self.sure_fg_projection,
+                                                                        sure_bg=self.sure_bg_projection,
+                                                                        mask=self.processed_projection)
+
+    def segment_projection_by_watershed_distance_based_markers(self, relative_threshold:float=0.0):
+        self.labeled_projection = get_watershed_labels_distance_transform(binary_img=self.processed_projection,
+                                                                          relative_threshold=relative_threshold)
 
     def get_nuclear_crops_from_labeled_projection(
-        self, xbuffer: int = 0, ybuffer: int = 0, filter: Filter = None
+        self, xbuffer: int = 0, ybuffer: int = 0, filter: Filter = None, multi_channel:bool=False,
     ):
         self.nuclear_crops = get_3d_nuclear_crops_from_2d_segmentation(
             labeled_projection=self.labeled_projection,
@@ -121,6 +145,7 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
             xbuffer=xbuffer,
             ybuffer=ybuffer,
             filter_object=filter,
+            multi_channel=multi_channel
         )
 
     def save_nuclear_crops(self):
@@ -146,7 +171,7 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
         )
         self.labeled_projection = label_objects(object_mask)
 
-    def segment_by_chan_vese_acwe(self, max_iter: int, fill_holes: bool = True):
+    def segment_by_chan_vese_acwe(self, max_iter: int=500, fill_holes: bool = True):
         object_mask = get_chan_vese_based_object_mask_2d(
             img=self.processed_projection, max_iter=max_iter, fill_holes=fill_holes
         )
@@ -157,7 +182,9 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
         for i in range(len(self.file_list)):
             self.read_in_image(i)
             self.select_image_by_channel()
-            # self.otsu_thresholding()
+            self.correct_exposure(gamma=0.5)
+            self.otsu_thresholding()
+            self.remove_holes_and_small_objects(9000)
             # self.apply_morphological_transformation(
             #    mode="closing", kernel_size=3, iterations=2
             # )
@@ -165,8 +192,14 @@ class ProjectedWatershed3dSegmentationPipeline(SegmentationPipeline):
             # self.set_sure_fg_projection_by_distance_transform()
             # self.set_sure_bg_projection_by_morphological_transformation()
             # self.segment_projection_by_watershed()
-            self.segment_by_canny_edge_detection(sigma=2.5)
+
+            #self.segment_by_canny_edge_detection(sigma=2.5)
+
+            #self.rescale_intensities()
+            #self.segment_by_chan_vese_acwe()
+
+            self.segment_projection_by_watershed_distance_based_markers(relative_threshold=0.5)
             self.get_nuclear_crops_from_labeled_projection(
-                filter=filter_pipeline, xbuffer=2, ybuffer=2
+                filter=filter_pipeline, xbuffer=0, ybuffer=0, multi_channel=True,
             )
             self.save_nuclear_crops()

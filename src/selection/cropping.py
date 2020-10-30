@@ -40,24 +40,40 @@ def get_3d_nuclear_crops_from_2d_segmentation(
     xbuffer: int = 0,
     ybuffer: int = 0,
     filter_object: ObjectPropertyFilter = None,
+    multi_channel:bool=True,
 ):
+
     nuclear_properties = regionprops(
         label_image=labeled_projection, intensity_image=intensity_projection
     )
     nuclei_dicts = []
     for properties in nuclear_properties:
-        depth, width, height = intensity_image.shape
+        if multi_channel:
+            depth, width, height, n_channels = intensity_image.shape
+        else:
+            depth, width, height = intensity_image.shape
         xmin, ymin, xmax, ymax = properties.bbox
         xmin = max(0, xmin - xbuffer)
         ymin = max(0, ymin - ybuffer)
         xmax = min(xmax + xbuffer + 1, width)
         ymax = min(ymax + ybuffer + 1, height)
 
-        # Filter artifact labels by a simple size filter of 2 pixels
+        if multi_channel:
+            crop = intensity_image[:, xmin:xmax, ymin:ymax, :]
+            # binary_mask_stack = [[properties.filled_image] * depth] * n_channels
+            # # Get stack in shape of crop image
+            # binary_mask_stack = np.array(binary_mask_stack).transpose((1,2,3,0))
+            # crop = crop * binary_mask_stack
+        else:
+            crop = intensity_image[:, xmin:xmax, ymin:ymax]
+            # binary_mask_stack = [properties.filled_image] * depth
+            # binary_mask_stack = np.array(binary_mask_stack)
+            # crop = crop * binary_mask_stack
+
         if filter_object is None:
             nuclei_dicts.append(
                 {
-                    "image": intensity_image[:, xmin:xmax, ymin:ymax],
+                    "image": crop,
                     "props": properties,
                 }
             )
@@ -66,7 +82,7 @@ def get_3d_nuclear_crops_from_2d_segmentation(
             if filter_object.filter(input=intensity_image):
                 nuclei_dicts.append(
                     {
-                        "image": intensity_image[:, xmin:xmax, ymin:ymax],
+                        "image": crop,
                         "props": properties,
                     }
                 )

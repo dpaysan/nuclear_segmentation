@@ -2,12 +2,14 @@ output_dir: '../../data/tcell_project/filtered/'
 module: src.pipelines.filter
 class: FilterPipeline
 run_params:
-  input_dir: '../../data/tcell_project/crops/unfiltered_canny_edge_16bit/segmentations_all'
+  input_dir: '../../data/tcell_project/crops/tcell_fish/segmentations_all'
+  multi_channel: True
 
 
 pipeline:
   - method: add_aspect_ratio_filter
     params:
+      #thresholds: 0.8
       thresholds: 0.8
   - method: run_filtering
   #- method: plot_images

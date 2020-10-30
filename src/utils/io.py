@@ -5,6 +5,7 @@ import tifffile
 from nd2reader import ND2Reader
 from typing import List
 import pickle as cPickle
+import skimage
 
 
 def get_file_list(
@@ -85,7 +86,9 @@ def lsm_to_npy(lsm_file: str, channels=None) -> List[dict]:
         # Expect TZCXY shape but reshapes it to ZYXC
         lsm_images = tifffile.imread(lsm_file)
         for i in range(len(lsm_images)):
-            image = lsm_images[i].reshape((0, 3, 2, 1))
+            image = lsm_images[i]
+            z,c,x,y = image.shape
+            image = np.transpose(image, [0,2,3,1])
             data_dict = {"channels": channels, "image": image, "meta_data": None}
             data_dicts.append(data_dict)
         return data_dicts
@@ -95,6 +98,7 @@ def lsm_to_npy(lsm_file: str, channels=None) -> List[dict]:
 
 
 def split_nd2_series_save_as_pickle(nd2_file: str, output_dir: str):
+    os.makedirs(output_dir, exist_ok=True)
     file_name = os.path.split(nd2_file)[1]
     file_name = file_name[: file_name.index(".")]
     data_dicts = nd2_to_npy(nd2_file=nd2_file)
@@ -106,8 +110,10 @@ def split_nd2_series_save_as_pickle(nd2_file: str, output_dir: str):
 def split_lsm_series_save_as_pickle(
     lsm_file: str, output_dir: str, channels: List[str] = None
 ):
-    file_name = os.path.split(lsm_file)[1]
+    os.makedirs(output_dir, exist_ok=True)
+    parent_dir, file_name = os.path.split(lsm_file)
     file_name = file_name[: file_name.index(".")]
+    file_name = os.path.basename(parent_dir) + '_' + file_name
     data_dicts = lsm_to_npy(lsm_file=lsm_file, channels=channels)
     for i in range(len(data_dicts)):
         path = str(os.path.join(output_dir, file_name)) + "_s{}.pkl".format(i)
@@ -130,7 +136,13 @@ def split_nd2_series_save_as_tif(nd2_file: str, output_dir: str):
 
 
 def save_npy_as_tiff(frame: np.ndarray, path: str):
-    tifffile.imsave(path, np.expand_dims(frame, axis=0), metadata={"axes": "TZYXC"})
+    # expects np.ndarray in shape ZYXC or ZYX
+    frame = np.expand_dims(frame, axis=0)
+    if len(frame.shape) == 4:
+        frame = np.expand_dims(frame, axis=2)
+    else:
+        frame = frame.transpose([0,1,4,2,3])
+    tifffile.imsave(path, frame, metadata = {'axes':'TZCYX'}, imagej=True)
 
 
 def save_pickle(obj, filename, protocol=-1):

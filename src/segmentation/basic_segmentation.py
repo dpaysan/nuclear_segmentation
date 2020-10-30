@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from scipy.ndimage import distance_transform_edt
 from skimage import segmentation
 from skimage.filters import threshold_otsu
 from skimage.feature import canny
@@ -8,8 +9,8 @@ from skimage.measure import label
 from scipy import ndimage as ndi
 
 
-def get_watershed_labels(
-    img: np.ndarray, sure_fg: np.ndarray, sure_bg: np.ndarray, mask: np.ndarray = None
+def get_watershed_labels_with_fg_bg_masks(
+        img: np.ndarray, sure_fg: np.ndarray, sure_bg: np.ndarray, mask: np.ndarray = None
 ):
     unknown = cv2.subtract(sure_bg, sure_fg)
     _, markers = cv2.connectedComponents(sure_fg)
@@ -25,8 +26,16 @@ def get_watershed_labels(
     return labels
 
 
+def get_watershed_labels_distance_transform(binary_img:np.ndarray, relative_threshold:float=0.0)-> np.ndarray:
+    distance = distance_transform_edt(binary_img)
+    markers = distance > relative_threshold * distance.max()
+    markers = label(markers)
+    labels = watershed(distance, markers=markers, mask=binary_img)
+    return labels
+
+
 def label_single_object_image(
-    img: np.ndarray, kernel_size: int = 3, iterations: int = 2
+        img: np.ndarray, kernel_size: int = 3, iterations: int = 2
 ):
     img = np.squeeze(img)
     kernel = np.ones((kernel_size, kernel_size))
@@ -43,10 +52,10 @@ def label_single_object_image(
 
 
 def get_edge_based_segmentation(
-    img: np.ndarray,
-    sigma: float = 3.0,
-    low_threshold: float = None,
-    high_threshold: float = None,
+        img: np.ndarray,
+        sigma: float = 3.0,
+        low_threshold: float = None,
+        high_threshold: float = None,
 ):
     edges = canny(
         img, sigma=sigma, low_threshold=low_threshold, high_threshold=high_threshold
@@ -56,7 +65,7 @@ def get_edge_based_segmentation(
 
 
 def get_chan_vese_based_object_mask_2d(
-    img: np.ndarray, max_iter: int = 500, fill_holes: bool = True,
+        img: np.ndarray, max_iter: int = 500, fill_holes: bool = True,
 ):
     object_mask = segmentation.chan_vese(img, max_iter=max_iter)
     if fill_holes:
@@ -70,12 +79,12 @@ def label_objects(img: np.ndarray):
 
 
 def get_chan_vese_based_object_mask_3d(
-    img: np.ndarray,
-    smoothing: float = 1.0,
-    iterations: int = 500,
-    init_level_set: str = "circle",
-    lambda1: float = 1.0,
-    lambda2: float = 1.0,
+        img: np.ndarray,
+        smoothing: float = 1.0,
+        iterations: int = 500,
+        init_level_set: str = "circle",
+        lambda1: float = 1.0,
+        lambda2: float = 1.0,
 ) -> np.ndarray:
     object_mask = segmentation.morphological_chan_vese(
         image=img,
