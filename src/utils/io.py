@@ -7,6 +7,8 @@ from typing import List
 import pickle as cPickle
 import skimage
 
+from src.utils.general import sorted_nicely
+
 
 def get_file_list(
     root_dir: str,
@@ -27,7 +29,7 @@ def get_file_list(
                     list_of_data_locs.append(os.path.join(root_dir, file))
                 else:
                     list_of_data_locs.append(file)
-    return sorted(list_of_data_locs)
+    return sorted_nicely(list_of_data_locs)
 
 
 def get_image_data_from_bioformat(file: str, file_type: str):

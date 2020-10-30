@@ -104,7 +104,7 @@ class ObjectEccentricityFilter(ObjectPropertyFilter):
         super().__init__(properties)
         if isinstance(thresholds, float):
             self.min_eccentricity = thresholds
-            self.max_eccentricity = 1.0
+            self.max_eccentricity = np.infty
         elif isinstance(thresholds, Iterable):
             self.min_eccentricity = thresholds[0]
             self.max_eccentricity = thresholds[1]
