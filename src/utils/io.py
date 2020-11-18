@@ -56,7 +56,10 @@ def nd2_to_npy(nd2_file: str) -> List[dict]:
         with ND2Reader(nd2_file) as reader:
             metadata = reader.metadata
             channels = metadata["channels"]
-            reader.bundle_axes = "zyxc"
+            if len(channels) > 1:
+                reader.bundle_axes = "zyxc"
+            else:
+                reader.bundle_axes = 'zyx'
             if "v" in reader.axes:
                 reader.iter_axes = "v"
                 for frame in reader:
@@ -77,7 +80,8 @@ def nd2_to_npy(nd2_file: str) -> List[dict]:
 
         return data_dicts
 
-    except Exception:
+    except Exception as e:
+        print(e)
         logging.debug("File not readable: {}".format(nd2_file))
         return []
 
