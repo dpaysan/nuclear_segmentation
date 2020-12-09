@@ -2,6 +2,10 @@ r""" A script that is used to run an experiment defined by a configuration provi
 TODO:
   - Find a better solution for modifying sys.path as required
 """
+
+import warnings
+warnings.filterwarnings("ignore")
+
 # built-in modules
 import argparse
 import importlib

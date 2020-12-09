@@ -1,3 +1,5 @@
+import copy
+
 from skimage import filters, restoration, feature
 import numpy as np
 
@@ -11,10 +13,18 @@ def remove_noise_layer_from_3d_img_by_canny(img, sigma: float) -> np.ndarray:
     return filtered
 
 
+def remove_layers_outside_roi(img, object_mask):
+    masked_img= copy.deepcopy(img)
+    for j in range(len(object_mask)):
+        if not object_mask[j].astype(bool).any():
+            masked_img[j] = np.zeros_like(masked_img[j])
+    return masked_img
+
+
 def denoise_img_bilateral(
     img: np.ndarray,
     window_size: int = None,
-    sigma_spatial: float = None,
+    sigma_spatial: float = 1,
     sigma_color: float = None,
     multichannel=False,
 ) -> np.ndarray:
@@ -23,7 +33,7 @@ def denoise_img_bilateral(
         for i in range(len(img)):
             denoised_img.append(
                 restoration.denoise_bilateral(
-                    img,
+                    img[i],
                     win_size=window_size,
                     sigma_spatial=sigma_spatial,
                     sigma_color=sigma_color,

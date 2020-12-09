@@ -34,5 +34,12 @@ def canny_based_surface_detection(
     return surface_boundaries
 
 
-def blob_detection(img: np.ndarray):
-    pass
+def get_hc_ec_structure_maps_by_thresholding(img, object_mask, k=0.6):
+    tmp_img = copy.deepcopy(img)
+    masked_img = ma.masked_array(tmp_img, ~(object_mask.astype(bool)))
+    threshold = masked_img.min() + k * (masked_img.max() - masked_img.min())
+    hc_mask = masked_img > threshold
+    ec_mask = masked_img <= threshold
+    structure_dict = {'cell_img':img, 'masked_img':masked_img, 'hc_mask' : hc_mask,
+                          'ec_mask' : ec_mask}
+    return structure_dict

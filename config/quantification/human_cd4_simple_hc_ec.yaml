@@ -1,0 +1,10 @@
+output_dir: '../../data/tcell_project/human_cd4/quantification'
+module: src.pipelines.quantification
+class: HumanTCellPipeline
+run_params:
+  input_dir: '../../data/tcell_project/human_cd4/filtered/selected_slices_ar_08_area25_50_16bit/'
+
+
+pipeline:
+  - method: run_default_pipeline
+
